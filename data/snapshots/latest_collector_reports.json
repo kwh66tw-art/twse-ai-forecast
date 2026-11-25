@@ -1,0 +1,51 @@
+[
+  {
+    "source_name": "yahoo_finance",
+    "status": "ok",
+    "fetched_at": "2026-11-24T21:45:00+08:00",
+    "message": "成功擷取 43/43 檔市場序列",
+    "domains_used": [
+      "query1.finance.yahoo.com",
+      "query2.finance.yahoo.com"
+    ]
+  },
+  {
+    "source_name": "twse_official",
+    "status": "ok",
+    "fetched_at": "2026-11-24T21:45:21+08:00",
+    "message": "證交所資料取得 5/5 項模組",
+    "domains_used": [
+      "openapi.twse.com.tw",
+      "www.twse.com.tw"
+    ]
+  },
+  {
+    "source_name": "taifex_official",
+    "status": "ok",
+    "fetched_at": "2026-11-24T21:45:22+08:00",
+    "message": "期交所資料取得 2/2 項",
+    "domains_used": [
+      "openapi.taifex.com.tw",
+      "www.taifex.com.tw"
+    ]
+  },
+  {
+    "source_name": "macro_fred",
+    "status": "failed",
+    "fetched_at": "2026-11-24T21:45:22+08:00",
+    "message": "FRED 總經指標取得 0/3 項（未取得：dgs10, t10y2y, hy_oas）",
+    "domains_used": [
+      "fred.stlouisfed.org"
+    ]
+  },
+  {
+    "source_name": "sentiment_news",
+    "status": "ok",
+    "fetched_at": "2026-11-24T21:46:55+08:00",
+    "message": "情緒與新聞取得 2/2 項（PTT=True，新聞=18則）",
+    "domains_used": [
+      "www.ptt.cc",
+      "news.google.com"
+    ]
+  }
+]

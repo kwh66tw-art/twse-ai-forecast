@@ -1,0 +1,15 @@
+# Python 與工具環境
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# 敏感環境變數與金鑰（嚴禁提交至儲存庫）
+.env
+.env.*
+
+# 過大且每週可重新擷取之暫存原始行情快取（保留帳本、特徵快照、報表與儀表板於版控）
+data/snapshots/latest_core_series.json

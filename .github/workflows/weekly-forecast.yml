@@ -1,0 +1,116 @@
+name: 台股大盤每週多週期預測與月度績效稽核
+
+on:
+  schedule:
+    # UTC 週日 23:50 = 台灣時間每週一 07:50（含 runner 啟動時間約於 07:55~08:05 盤前執行）
+    - cron: "50 23 * * 0"
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Gemini API 模型代碼"
+        required: false
+        default: "gemini-4-neon"
+        type: string
+      thinking_level:
+        description: "思考強度（low / medium / high / xhigh）"
+        required: false
+        default: "high"
+        type: choice
+        options:
+          - low
+          - medium
+          - high
+          - xhigh
+      force_monthly_audit:
+        description: "是否強制產出本月績效評估報告"
+        required: false
+        default: false
+        type: boolean
+      record_id:
+        description: "選填：手動覆寫週次識別碼（例如 2026-W49）"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: twse-weekly-forecast
+  cancel-in-progress: false
+
+jobs:
+  weekly-forecast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TZ: Asia/Taipei
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ inputs.model || 'gemini-4-neon' }}
+      GEMINI_THINKING_LEVEL: ${{ inputs.thinking_level || 'high' }}
+
+    steps:
+      - name: 檢出儲存庫與完整歷史帳本
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 安裝 uv 與 Python 專案相依套件
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: 同步虛擬環境
+        run: uv sync --extra dev
+
+      - name: 執行核心邏輯前置單元測試
+        run: uv run pytest -v
+
+      - name: 執行五大資料擷取、Gemini 4 Neon 辯證與帳本鎖定
+        run: |
+          ARGS="--skip-if-exists"
+          if [ "${{ inputs.force_monthly_audit }}" = "true" ]; then
+            ARGS="$ARGS --force-monthly-audit"
+          fi
+          if [ -n "${{ inputs.record_id }}" ]; then
+            ARGS="$ARGS --record-id ${{ inputs.record_id }}"
+          fi
+          uv run twse-forecast run-weekly-cloud $ARGS
+
+      - name: 驗證不可竄改 SHA-256 雜湊鏈完整性
+        run: uv run twse-forecast verify-ledger
+
+      - name: 輸出本週報告至 GitHub Actions Summary
+        run: |
+          LATEST_WEEKLY=$(ls -1t reports/weekly/*.md 2>/dev/null | head -n 1 || true)
+          if [ -n "$LATEST_WEEKLY" ]; then
+            cat "$LATEST_WEEKLY" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          LATEST_MONTHLY=$(ls -1t reports/monthly/*.md 2>/dev/null | head -n 1 || true)
+          if [ -n "$LATEST_MONTHLY" ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "---" >> "$GITHUB_STEP_SUMMARY"
+            cat "$LATEST_MONTHLY" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: 自動提交鎖定帳本、週報與儀表板至 GitHub
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/ledger.sqlite data/predictions_ledger.jsonl data/snapshots/ reports/ dashboard/index.html
+          if git diff --cached --quiet; then
+            echo "本週帳本與報表無異動，略過 commit。"
+          else
+            git commit -m "chore(forecast): lock weekly TWSE forecast [skip ci]"
+            git push
+          fi
+
+      - name: 上傳報表與互動式儀表板 Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: twse-forecast-reports
+          path: |
+            reports/
+            dashboard/index.html
+            data/predictions_ledger.jsonl
+          retention-days: 90

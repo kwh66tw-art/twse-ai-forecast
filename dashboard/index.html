@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>台股大盤多週期 AI 預測與實證儀表板</title>
+<style>
+  :root {
+    --bg: #0b1120;
+    --card: #131c31;
+    --border: #23304c;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --up: #10b981;
+    --flat: #f59e0b;
+    --down: #ef4444;
+    --accent: #38bdf8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", sans-serif;
+    line-height: 1.55;
+  }
+  .container { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+  header {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 18px 22px; background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  }
+  h1 { margin: 0; font-size: 22px; font-weight: 700; }
+  h2 { margin: 0 0 12px 0; font-size: 16px; color: var(--accent); }
+  h3 { margin: 0 0 6px 0; font-size: 14px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .badge { padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .badge-ok { background: rgba(16, 185, 129, 0.16); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+  .badge-err { background: rgba(239, 68, 68, 0.16); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+  .kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .kpi-lbl { font-size: 12px; color: var(--muted); }
+  .kpi-val { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .horizons-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .h-top { display: flex; justify-content: space-between; align-items: baseline; }
+  .h-title { font-size: 16px; font-weight: 700; }
+  .h-anchor { font-size: 12px; color: var(--muted); }
+  .h-score-row { display: flex; justify-content: space-between; align-items: baseline; margin: 10px 0 8px 0; }
+  .score { font-size: 18px; font-weight: 700; }
+  .pos { color: var(--up); } .neg { color: var(--down); } .neu { color: var(--flat); }
+  .q-meta { font-size: 12px; color: var(--muted); }
+  .prob-bar { display: flex; height: 9px; border-radius: 999px; overflow: hidden; background: #1e293b; }
+  .seg-up { background: var(--up); } .seg-flat { background: var(--flat); } .seg-down { background: var(--down); }
+  .prob-legend { display: flex; justify-content: space-between; font-size: 11px; margin: 6px 0 10px 0; }
+  .c-up { color: var(--up); } .c-flat { color: var(--flat); } .c-down { color: var(--down); }
+  .h-levels { font-size: 12px; color: var(--text); display: flex; flex-direction: column; gap: 3px; border-top: 1px solid var(--border); padding-top: 8px; }
+  .h-thesis { font-size: 12px; color: var(--muted); margin: 8px 0 0 0; }
+  .split-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
+  @media (max-width: 960px) { .split-grid { grid-template-columns: 1fr; } }
+  .equity-svg { width: 100%; height: auto; display: block; }
+  .chart-legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+  .empty-chart { padding: 36px 16px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 8px; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #cbd5e1; }
+  .debate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .debate-box { background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 13px; }
+  .debate-box p { margin: 0; color: #cbd5e1; }
+  .debate-box.bull h3 { color: var(--up); }
+  .debate-box.bear h3 { color: var(--down); }
+  .debate-box.cio h3 { color: var(--accent); }
+  .debate-box.diff h3 { color: var(--flat); }
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  .metric-item { background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+  .m-lbl { font-size: 11px; color: var(--muted); }
+  .m-val { font-size: 15px; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>台灣股市大盤多週期 AI 預測與實證儀表板</h1>
+        <div class="subtitle">2026-W48 ｜ 基準日 2026-11-24 ｜ 加權指數 40,122.35 ｜ 執行模型：Gemini 4 Carbon ｜ 更新時間：2026-11-24T21:48:26+08:00</div>
+      </div>
+      <div class="badge badge-ok">SHA-256 雜湊鏈驗證通過（1 筆鎖定紀錄）</div>
+    </header>
+
+    <section class="kpi-strip">
+      <div class="card"><div class="kpi-lbl">建議模擬持股水位 (0050)</div><div class="kpi-val">28.0%</div><div class="kpi-sub">純量化基準：17.7%</div></div>
+      <div class="card"><div class="kpi-lbl">AI 動態策略模擬報酬</div><div class="kpi-val">+0.00%</div><div class="kpi-sub">0050 買進持有：+0.00%</div></div>
+      <div class="card"><div class="kpi-lbl">AI 策略夏普值 / 最大回檔</div><div class="kpi-val">0.00</div><div class="kpi-sub">Max Drawdown：0.00%（Quant：+0.00%）</div></div>
+      <div class="card"><div class="kpi-lbl">已鎖定預測週數 / 結算樣本</div><div class="kpi-val">1 週 / 0 筆</div><div class="kpi-sub">含雙邊 ETF 手續費與證交稅</div></div>
+    </section>
+
+    <section>
+      <h2>五週期量化與 AI 辯證預測總覽</h2>
+      <div class="horizons-grid">
+        
+                <div class="card horizon-card">
+                  <div class="h-top">
+                    <span class="h-title">1–4 週</span>
+                    <span class="h-anchor">20 交易日</span>
+                  </div>
+                  <div class="h-score-row">
+                    <span class="score neg">AI -18.0</span>
+                    <span class="q-meta">量化 -35.3 (Δ +17.3)</span>
+                  </div>
+                  <div class="prob-bar" title="上漲 46.3% / 盤整 18.7% / 下跌 35.0%">
+                    <div class="seg-up" style="width:46.31%"></div>
+                    <div class="seg-flat" style="width:18.66%"></div>
+                    <div class="seg-down" style="width:35.03%"></div>
+                  </div>
+                  <div class="prob-legend">
+                    <span class="c-up">漲 46.3%</span>
+                    <span class="c-flat">盤 18.7%</span>
+                    <span class="c-down">跌 35.0%</span>
+                  </div>
+                  <div class="h-levels">
+                    <div>預期報酬：<strong>+0.92%</strong></div>
+                    <div>80% 區間：<code>37,257 ~ 43,724</code></div>
+                    <div>失效關鍵位：<code>38,000</code></div>
+                  </div>
+                  <p class="h-thesis">11/24 強彈雖暫解破底危機並修正 -4.38% 負乖離，但上方月線（41,959）與季線扣抵反壓沉重，外資期貨淨空單仍逾 10 萬口且融資單日暴增 4.54%，短線預期呈寬幅震盪消化浮額；若失守 38,000 點代表強彈失敗。</p>
+                </div>
+                
+                <div class="card horizon-card">
+                  <div class="h-top">
+                    <span class="h-title">1–3 個月</span>
+                    <span class="h-anchor">40 交易日</span>
+                  </div>
+                  <div class="h-score-row">
+                    <span class="score neg">AI -15.0</span>
+                    <span class="q-meta">量化 -36.6 (Δ +21.6)</span>
+                  </div>
+                  <div class="prob-bar" title="上漲 48.6% / 盤整 25.0% / 下跌 26.4%">
+                    <div class="seg-up" style="width:48.58%"></div>
+                    <div class="seg-flat" style="width:25.04%"></div>
+                    <div class="seg-down" style="width:26.38%"></div>
+                  </div>
+                  <div class="prob-legend">
+                    <span class="c-up">漲 48.6%</span>
+                    <span class="c-flat">盤 25.0%</span>
+                    <span class="c-down">跌 26.4%</span>
+                  </div>
+                  <div class="h-levels">
+                    <div>預期報酬：<strong>+2.68%</strong></div>
+                    <div>80% 區間：<code>36,575 ~ 45,822</code></div>
+                    <div>失效關鍵位：<code>37,500</code></div>
+                  </div>
+                  <p class="h-thesis">12 月上旬將迎來 11 月上市營收（前月正成長廣度達 71.07%）基本面支撐，惟仍須經過 12 月 FOMC 利率決議與未來 4 週季線高檔扣抵（47,800）考驗，維持中性略偏謹慎；若有效跌破 37,500 點則防中期二次探底。</p>
+                </div>
+                
+                <div class="card horizon-card">
+                  <div class="h-top">
+                    <span class="h-title">3–6 個月</span>
+                    <span class="h-anchor">90 交易日</span>
+                  </div>
+                  <div class="h-score-row">
+                    <span class="score pos">AI +22.0</span>
+                    <span class="q-meta">量化 +9.7 (Δ +12.3)</span>
+                  </div>
+                  <div class="prob-bar" title="上漲 65.2% / 盤整 19.9% / 下跌 15.0%">
+                    <div class="seg-up" style="width:65.16%"></div>
+                    <div class="seg-flat" style="width:19.86%"></div>
+                    <div class="seg-down" style="width:14.98%"></div>
+                  </div>
+                  <div class="prob-legend">
+                    <span class="c-up">漲 65.2%</span>
+                    <span class="c-flat">盤 19.9%</span>
+                    <span class="c-down">跌 15.0%</span>
+                  </div>
+                  <div class="h-levels">
+                    <div>預期報酬：<strong>+11.01%</strong></div>
+                    <div>80% 區間：<code>36,602 ~ 52,480</code></div>
+                    <div>失效關鍵位：<code>36,500</code></div>
+                  </div>
+                  <p class="h-thesis">上市中位數 P/B 已修正至 1.30 倍且整體營收年增達 +45.42%，待未來 1～2 個月季線高價扣抵壓力消化完畢，AI 晶片與先進封裝訂單能見度將引領估值修復，中期展望轉趨正向；失守 36,500 點則需重估景氣下修風險。</p>
+                </div>
+                
+                <div class="card horizon-card">
+                  <div class="h-top">
+                    <span class="h-title">6–12 個月</span>
+                    <span class="h-anchor">180 交易日</span>
+                  </div>
+                  <div class="h-score-row">
+                    <span class="score pos">AI +58.0</span>
+                    <span class="q-meta">量化 +82.2 (Δ -24.2)</span>
+                  </div>
+                  <div class="prob-bar" title="上漲 80.3% / 盤整 12.6% / 下跌 7.2%">
+                    <div class="seg-up" style="width:80.26%"></div>
+                    <div class="seg-flat" style="width:12.58%"></div>
+                    <div class="seg-down" style="width:7.16%"></div>
+                  </div>
+                  <div class="prob-legend">
+                    <span class="c-up">漲 80.3%</span>
+                    <span class="c-flat">盤 12.6%</span>
+                    <span class="c-down">跌 7.2%</span>
+                  </div>
+                  <div class="h-levels">
+                    <div>預期報酬：<strong>+30.20%</strong></div>
+                    <div>80% 區間：<code>38,821 ~ 65,661</code></div>
+                    <div>失效關鍵位：<code>38,500</code></div>
+                  </div>
+                  <p class="h-thesis">受惠 3–12 月動能（+66.51%）與企業獲利高成長支撐，半年至一年維持多頭格局，但考量美債近 4.89% 導致 ERP 轉負（-0.76%）與關稅政策變數，刻意較純量化（+82.22）下調 24 分以維持合理風險定價。</p>
+                </div>
+                
+                <div class="card horizon-card">
+                  <div class="h-top">
+                    <span class="h-title">1–3 年</span>
+                    <span class="h-anchor">375 交易日</span>
+                  </div>
+                  <div class="h-score-row">
+                    <span class="score pos">AI +42.0</span>
+                    <span class="q-meta">量化 +31.9 (Δ +10.1)</span>
+                  </div>
+                  <div class="prob-bar" title="上漲 88.6% / 盤整 8.8% / 下跌 2.6%">
+                    <div class="seg-up" style="width:88.61%"></div>
+                    <div class="seg-flat" style="width:8.75%"></div>
+                    <div class="seg-down" style="width:2.64%"></div>
+                  </div>
+                  <div class="prob-legend">
+                    <span class="c-up">漲 88.6%</span>
+                    <span class="c-flat">盤 8.8%</span>
+                    <span class="c-down">跌 2.6%</span>
+                  </div>
+                  <div class="h-levels">
+                    <div>預期報酬：<strong>+51.60%</strong></div>
+                    <div>80% 區間：<code>43,943 ~ 77,710</code></div>
+                    <div>失效關鍵位：<code>34,000</code></div>
+                  </div>
+                  <p class="h-thesis">中位數 P/B 1.30 倍處於台股長線極具吸引力的安全區間，搭配長期 AI 算力基礎建設與半導體製造優勢，1–3 年維持結構性多頭配置觀點，僅因美債高利率牽制估值上限而保留適度保守緩衝。</p>
+                </div>
+                
+      </div>
+    </section>
+
+    
+        <section class="card debate-section">
+          <h2>本週 AI 多空辯證與投資長裁決</h2>
+          <div class="debate-grid">
+            <div class="debate-box bull"><h3>多頭論點（Bull Case）</h3><p>1. 台股基本面與營收結構極強：10 月（11510）全體上市公司月營收正成長家數廣度達 71.07%，合計營收年增率高達 +45.42%、中位數年增 +13.62%，顯示實體獲利仍在高速擴張。
+2. 估值經 11 月急修正後已顯著降溫：上市個股中位數 P/B 回落至 1.30 倍、中位數 P/E 僅 14.13 倍、中位數現金殖利率達 4.13%，具備長線安全邊際。
+3. 重大催化劑扭轉破底危機：黃仁勳回鍋重掌輝達消除市場對 AI 領導層疑慮，11/24 台股強彈收復 40,122.35 點與年線（MA240: 39,506.22），當日上漲家數達 1,053 家（僅 26 家下跌），且代表籃子仍有 70% 維持在年線之上。</p></div>
+            <div class="debate-box bear"><h3>空頭稽核（Bear Case）</h3><p>1. 總經高利率與 ERP 轉負壓抑估值：美國通膨降溫不如預期引發 12 月 FOMC 升息預期升溫，美債 10 年殖利率升至 4.888%，導致台股風險溢酬 ERP（中位殖利率減美債 10Y）暫為負值 -0.76%，VIX 亦處於 29.56 高警戒區。
+2. 外資期現貨籌碼尚未反手且散戶槓桿急升：近 5 日外資現貨大幅賣超 -1,897.25 億元，台指期淨空單高達 -103,182 口，選擇權 Put/Call Ratio 僅 30.9%；同時融資單日急增 +4.541% 至 4,535.05 億元，短線籌碼浮額增溫。
+3. 技術面季線高價扣抵反壓：大盤仍位於月線（41,959.40）與季線（45,494.29）之下，未來 4 週季線將扣抵 47,800.17 高價區（餘裕 -16.06%），加上市場討論 200% 晶片關稅與美國擴廠成本變數，上檔面臨層層套牢賣壓。</p></div>
+            <div class="debate-box cio"><h3>投資長裁決（CIO Synthesis）</h3><p>短線處於「基本面超強但總經利率與籌碼劇烈博弈」的高波動轉換期（20 日實現年化波動率達 61.45%）。投資長裁決採「短空謹慎防守、中長線分批布局、嚴守波動率控管」原則：短線 1–4 週不追高 11/24 強彈日後的隔日震盪，嚴控部位等待外資賣壓趨緩與 12 月 FOMC 落地；3 個月以上則憑藉 1.3 倍低 P/B 估值與 71% 營收正成長廣度維持偏多看待，但主動下調純量化對 6–12 個月的過度樂觀預期。</p></div>
+            <div class="debate-box diff"><h3>與純量化差異（Override Rationale）</h3><p>相較純量化基準進行三項關鍵修正：(1) 短線 1–4 週與 1–3 個月分別上調 +17.34 與 +21.64 分，因量化公式過度重罰過去 5 日外資賣超與 20 日費半跌幅，低估了黃仁勳重掌輝達及 11/24 千家齊漲扭轉流動性恐慌的動能，但仍維持負分保守看待月線與季線反壓；(2) 對 6–12 個月主動下調 -24.22 分，因量化被 3–12 月動能（+66.51%）與營收 YoY 拉至極端高分 +82.22，卻忽略美債近 4.89%、負 ERP（-0.76%）與晶片關稅議題對估值擴張倍數的實質上限；(3) 持股水位由純量化 17.7% 溫和調升至 28.0%，在年化波動率逾 60% 的環境下仍嚴格保留 72% 現金防禦尾部風險。</p></div>
+          </div>
+        </section>
+        
+    
+        <section class="card">
+          <h2>五大維度核心指標快照</h2>
+          <div class="metrics-grid">
+            <div class="metric-item"><span class="m-lbl">台積電 ADR 溢價率</span><span class="m-val">7.358%</span></div>
+            <div class="metric-item"><span class="m-lbl">上市中位數 P/B ｜ ERP</span><span class="m-val">1.3 ｜ -0.76%</span></div>
+            <div class="metric-item"><span class="m-lbl">月營收正成長廣度</span><span class="m-val">71.07%</span></div>
+            <div class="metric-item"><span class="m-lbl">外資 5 日現貨淨買超</span><span class="m-val">-1897.25 億</span></div>
+            <div class="metric-item"><span class="m-lbl">外資台指期淨未平倉</span><span class="m-val">-103182 口</span></div>
+            <div class="metric-item"><span class="m-lbl">選擇權 Put/Call Ratio</span><span class="m-val">30.9%</span></div>
+            <div class="metric-item"><span class="m-lbl">30 檔籃子站上季線</span><span class="m-val">20.0%</span></div>
+            <div class="metric-item"><span class="m-lbl">PTT 股板狂熱 / 反向</span><span class="m-val">7.7 / 0.0</span></div>
+          </div>
+        </section>
+        
+
+    <section class="split-grid">
+      <div class="card">
+        <h2>模擬投資組合淨值曲線（初始 100 萬元，對標 0050 含息）</h2>
+        <div class="chart-legend">
+          <span><span class="dot" style="background:#10b981"></span>AI 動態策略</span>
+          <span><span class="dot" style="background:#38bdf8"></span>純量化基準</span>
+          <span><span class="dot" style="background:#64748b"></span>100% 買進持有 0050</span>
+        </div>
+        <div class="empty-chart">目前累積僅有基期建倉點，將於下週起繪製 AI 動態策略 vs. 0050 大盤實戰淨值曲線。</div>
+      </div>
+      <div class="card">
+        <h2>各週期 Brier Score 與 AI 淨附加價值稽核</h2>
+        <table>
+          <thead><tr><th>週期</th><th>樣本</th><th>AI 命中</th><th>量化命中</th><th>AI Brier</th><th>量化 Brier</th><th>淨改善</th></tr></thead>
+          <tbody><tr><td>1–4 週</td><td>0</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>1–3 個月</td><td>0</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>3–6 個月</td><td>0</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>6–12 個月</td><td>0</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>1–3 年</td><td>0</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>不可竄改預測帳本存證紀錄（最近 12 週）</h2>
+      <table>
+        <thead><tr><th>週次</th><th>基準交易日</th><th>TAIEX 收盤</th><th>建議持股</th><th>時段性質</th><th>SHA-256 雜湊</th></tr></thead>
+        <tbody><tr><td>2026-W48</td><td>2026-11-24</td><td>40,122.35</td><td>28.0%</td><td>補跑/基期</td><td><code>de44321c0b73ec52...</code></td></tr></tbody>
+      </table>
+    </section>
+  </div>
+</body>
+</html>

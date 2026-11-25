@@ -1,0 +1,241 @@
+{
+  "reference_trade_date": "2026-11-24",
+  "reference_taiex_close": 40122.35,
+  "reference_0050_trade_date": "2026-11-24",
+  "reference_0050_adj_close": 95.7,
+  "cross_market": {
+    "tsmc_adr_premium_pct": 7.358,
+    "usd_twd_latest": 32.922,
+    "usd_twd_ret_20d_pct": 1.19,
+    "sox_ret_5d_pct": -0.24,
+    "sox_ret_20d_pct": -13.49,
+    "nvda_ret_5d_pct": 5.71,
+    "sp500_ret_5d_pct": -2.42,
+    "nasdaq_ret_5d_pct": -1.71,
+    "sp_fut_ret_1d_pct": -1.33,
+    "vix_latest": 29.56,
+    "us10y_yield_pct": 4.888,
+    "yield_spread_pct": 0.72,
+    "yield_spread_source": "Yahoo:10Y-3M(降級替代)",
+    "hy_credit_spread_pct": null,
+    "hy_credit_spread_chg_20d": null
+  },
+  "fundamentals_valuation": {
+    "market_median_pb": 1.3,
+    "market_median_pe": 14.13,
+    "market_median_div_yield_pct": 4.13,
+    "equity_risk_premium_pct": -0.76,
+    "monthly_revenue_ym": "11510",
+    "monthly_revenue_pos_ratio_pct": 71.07,
+    "monthly_revenue_agg_yoy_pct": 45.42,
+    "monthly_revenue_median_yoy_pct": 13.62
+  },
+  "microstructure_flows": {
+    "foreign_5d_net_b": -1897.25,
+    "trust_5d_net_b": 192.63,
+    "dealer_prop_5d_net_b": -27.72,
+    "foreign_1d_net_b": -503.9,
+    "foreign_tx_net_oi": -103182,
+    "pc_ratio_latest_pct": 30.9,
+    "pc_ratio_5d_avg_pct": 39.17,
+    "margin_balance_b": 4535.05,
+    "margin_change_1d_pct": 4.541,
+    "twse_advancing_count": 1053,
+    "twse_declining_count": 26
+  },
+  "technicals": {
+    "latest_date": "2026-11-24",
+    "latest_close": 40122.35,
+    "ret_5d_pct": 0.08,
+    "ret_20d_pct": -12.96,
+    "ret_60d_pct": -11.17,
+    "ret_120d_pct": -10.31,
+    "ret_240d_pct": 49.09,
+    "momentum_12_1m_pct": 66.51,
+    "ma5": 38317.87,
+    "ma20": 41959.4,
+    "ma60": 45494.29,
+    "ma120": 45185.95,
+    "ma240": 39506.22,
+    "ma12m": 40039.4,
+    "ma36m": 28209.34,
+    "bias_20d_pct": -4.38,
+    "bias_60d_pct": -11.81,
+    "bias_240d_pct": 1.56,
+    "rsi14": 42.91,
+    "atr14_pct": 4.382,
+    "realized_vol_20d": 0.6145,
+    "bollinger_squeeze_pct": 99.2,
+    "price_5y_percentile": 73.9,
+    "ma60_deduction": {
+      "available": true,
+      "ma60": 45494.29,
+      "ma60_slope_5d_pct": -1.202,
+      "deduct_1w_ref_price": 46948.72,
+      "deduct_4w_ref_price": 47800.17,
+      "deduction_cushion_1w_pct": -14.54,
+      "deduction_cushion_4w_pct": -16.06,
+      "regime": "扣抵高價區（季線具自然下彎反壓）"
+    }
+  },
+  "breadth": {
+    "available": true,
+    "basket_size_used": 30,
+    "pct_above_ma20": 20.0,
+    "pct_above_ma60": 20.0,
+    "pct_above_ma240": 70.0,
+    "equal_weight_ret_20d_pct": -11.8,
+    "taiex_vs_equal_spread_20d_pct": -1.16,
+    "narrow_leadership_warning": false
+  },
+  "sentiment": {
+    "posts_analyzed": 78,
+    "boom_posts": 16,
+    "avg_nrec": 45.8,
+    "panic_keyword_hits": 1,
+    "euphoria_keyword_hits": 3,
+    "retail_euphoria_score": 7.7,
+    "contrarian_signal": 0.0,
+    "sample_panic_titles": [
+      "[創作]新軋空斷頭夢(新鴛鴦蝴蝶夢)"
+    ],
+    "sample_euphoria_titles": [
+      "Re: [新聞] 哲哲狠砸3千萬抄底0050　今亮燈漲停",
+      "[新聞] 哲哲狠砸3千萬抄底0050　今亮燈漲停「帳",
+      "Re: [新聞] 哲哲狠砸3千萬抄底0050　今亮燈漲停「帳"
+    ]
+  },
+  "news_headlines": [
+    {
+      "title": "螞蟻雄兵挺台積電戰勝了！3萬多人上周勇敢抄底 今漲停1張最多賺26萬元 - Yahoo股市",
+      "source": "Yahoo股市",
+      "pub_date": "Tue, 24 Nov 2026 02:00:52 GMT"
+    },
+    {
+      "title": "【1125台股盤前】黃仁勳閃電回歸激勵大漲近9%！外資尚未回頭留意美股休市量縮風險，策略共識股鎖定【聖暉*】、【至上】、【長榮航】｜豐雲學堂2026 年 11 月 - 永豐金證券",
+      "source": "永豐金證券",
+      "pub_date": "Tue, 24 Nov 2026 09:19:56 GMT"
+    },
+    {
+      "title": "川普再點名台灣！大讚魏哲家是「天才」 透露台積電德州建廠計畫 - 自由財經",
+      "source": "自由財經",
+      "pub_date": "Tue, 24 Nov 2026 03:10:53 GMT"
+    },
+    {
+      "title": "11／24台股雷達｜台股絕地大反攻鴻海、台積電強勢亮燈漲停- 證券 - 工商時報",
+      "source": "工商時報",
+      "pub_date": "Tue, 24 Nov 2026 11:28:00 GMT"
+    },
+    {
+      "title": "台積電226億美元新廠落腳德州？能否減稅成關鍵 - 鉅亨網",
+      "source": "鉅亨網",
+      "pub_date": "Tue, 24 Nov 2026 11:30:05 GMT"
+    },
+    {
+      "title": "86檔「黃仁勳概念股」紅通通 台積電鴻海緯創65檔飆漲停 - Yahoo股市",
+      "source": "Yahoo股市",
+      "pub_date": "Tue, 24 Nov 2026 02:15:26 GMT"
+    },
+    {
+      "title": "今日漲停股｜黃仁勳回鍋引爆台股暴漲3310點收復四萬大關！長榮航、國泰金、聯電領軍攻頂 1124 - 永豐金證券",
+      "source": "永豐金證券",
+      "pub_date": "Tue, 24 Nov 2026 07:05:02 GMT"
+    },
+    {
+      "title": "明天會震盪!!換股時機?台積電⊕、鴻海⊕、台達電⊕、國巨⊕、金像電⊕ - 鉅亨網",
+      "source": "鉅亨網",
+      "pub_date": "Tue, 24 Nov 2026 09:12:57 GMT"
+    },
+    {
+      "title": "預告晶片關稅200%！ 川普驚爆：台積電將赴德州建廠 - Yahoo新聞",
+      "source": "Yahoo新聞",
+      "pub_date": "Tue, 24 Nov 2026 09:05:00 GMT"
+    },
+    {
+      "title": "AI 總司令回歸！鴻海、廣達、台積電漲停，輝達概念股還能追？五大 AI 供應鏈全盤點【黃仁勳11天回鍋懶人包】｜美股觀察 - 永豐金證券",
+      "source": "永豐金證券",
+      "pub_date": "Tue, 24 Nov 2026 08:56:34 GMT"
+    },
+    {
+      "title": "半導體全面噴出！21檔飆漲停 「這檔」在手訂單衝840億、盟立Q3獲利暴增609%雙雙亮紅燈 - Yahoo股市",
+      "source": "Yahoo股市",
+      "pub_date": "Tue, 24 Nov 2026 12:24:00 GMT"
+    },
+    {
+      "title": "權王台積電跳空漲停炸106億成交額！黃仁勳回輝達爆利多、台股猛攻3000點 「這檔記憶體」卻逆勢下殺翻黑 - Yahoo股市",
+      "source": "Yahoo股市",
+      "pub_date": "Tue, 24 Nov 2026 10:48:00 GMT"
+    },
+    {
+      "title": "台積電漲停到底！2萬多張買單高掛 市值一天暴增鴻海+日月光 - Yahoo股市",
+      "source": "Yahoo股市",
+      "pub_date": "Tue, 24 Nov 2026 06:37:46 GMT"
+    },
+    {
+      "title": "黃仁勳重磅回歸台股飆3310史上最大漲點！台積電領上市櫃621檔漲停「瑤池金母」拿下吸金王｜Yahoo財經掃描 - Yahoo股市",
+      "source": "Yahoo股市",
+      "pub_date": "Tue, 24 Nov 2026 09:24:17 GMT"
+    },
+    {
+      "title": "韭菜翻車潮+1！台股暴漲前買0050反1 違約交割近4千萬元 - Yahoo股市",
+      "source": "Yahoo股市",
+      "pub_date": "Tue, 24 Nov 2026 10:14:46 GMT"
+    },
+    {
+      "title": "黃仁勳回歸！鴻海、台積電、聯發科等556檔都漲停 金控總座曝供應鏈鬆口氣 - Yahoo股市",
+      "source": "Yahoo股市",
+      "pub_date": "Tue, 24 Nov 2026 09:23:44 GMT"
+    },
+    {
+      "title": "野村展望2027年看好資料中心商機 台股關注半導體、散熱與高速傳輸 - Yahoo股市",
+      "source": "Yahoo股市",
+      "pub_date": "Tue, 24 Nov 2026 07:39:52 GMT"
+    },
+    {
+      "title": "台股狂飆3300點寫歷史！ 600檔鎖死「開盤即收盤」 法人教3招搶上車 - Yahoo股市",
+      "source": "Yahoo股市",
+      "pub_date": "Tue, 24 Nov 2026 04:51:56 GMT"
+    }
+  ],
+  "event_calendar": [
+    {
+      "date": "2026-12-16",
+      "event": "台指期／月選擇權結算日（常伴隨外資轉倉與尾盤波動放大）"
+    },
+    {
+      "date": "2026-12-01 ~ 2026-12-10",
+      "event": "上市櫃前月營收密集公布期（10 日截止，決定 1–3 個月動能強弱）"
+    },
+    {
+      "date": "2026-11",
+      "event": "美國 FOMC 利率決議例行月份（須留意點陣圖與美債殖利率波動）"
+    }
+  ],
+  "historical_horizon_stats": {
+    "1_4w": {
+      "mean_return": 0.01654,
+      "std_return": 0.06289,
+      "sample_count": 1192
+    },
+    "1_3m": {
+      "mean_return": 0.03558,
+      "std_return": 0.08992,
+      "sample_count": 1172
+    },
+    "3_6m": {
+      "mean_return": 0.08805,
+      "std_return": 0.1544,
+      "sample_count": 1122
+    },
+    "6_12m": {
+      "mean_return": 0.20365,
+      "std_return": 0.26099,
+      "sample_count": 1032
+    },
+    "1_3y": {
+      "mean_return": 0.42639,
+      "std_return": 0.32835,
+      "sample_count": 837
+    }
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "reference_trade_date": "2026-11-24",
+  "reference_taiex_close": 40122.35,
+  "target_allocation": 0.1766,
+  "horizons": {
+    "1_4w": {
+      "horizon_key": "1_4w",
+      "label": "1–4 週",
+      "anchor_trading_days": 20,
+      "quant_score": -35.34,
+      "expected_return": 0.00209,
+      "std_dev": 0.06289,
+      "prob_up": 0.4187,
+      "prob_flat": 0.1884,
+      "prob_down": 0.3929,
+      "ci80_low_return": -0.0785,
+      "ci80_high_return": 0.08269,
+      "ci80_low_level": 36972.62,
+      "ci80_high_level": 43440.08,
+      "key_drivers": {
+        "跨市場費半與夜盤": -18.29,
+        "台積電ADR溢價支撐": -25.82,
+        "外資5日現貨與期貨籌碼": -97.35,
+        "選擇權Put/Call籌碼": -99.63,
+        "短期乖離均值反轉": 75.02,
+        "季線4週扣抵方向": -99.68,
+        "PTT股板反向情緒": 0.0
+      }
+    },
+    "1_3m": {
+      "horizon_key": "1_3m",
+      "label": "1–3 個月",
+      "anchor_trading_days": 40,
+      "quant_score": -36.64,
+      "expected_return": 0.01416,
+      "std_dev": 0.08992,
+      "prob_up": 0.4301,
+      "prob_flat": 0.2582,
+      "prob_down": 0.3117,
+      "ci80_low_return": -0.10107,
+      "ci80_high_return": 0.1294,
+      "ci80_low_level": 36067.09,
+      "ci80_high_level": 45314.25,
+      "key_drivers": {
+        "上市月營收正成長廣度": 88.64,
+        "外資與投信5日波段買盤": -23.08,
+        "季線扣抵與趨勢結構": -99.68,
+        "代表籃子寬度與拉積濾網": -83.37,
+        "費半20日與台幣匯率趨勢": -80.04,
+        "VIX波動率風險濾網": -83.21
+      }
+    },
+    "3_6m": {
+      "horizon_key": "3_6m",
+      "label": "3–6 個月",
+      "anchor_trading_days": 90,
+      "quant_score": 9.67,
+      "expected_return": 0.09775,
+      "std_dev": 0.1544,
+      "prob_up": 0.6214,
+      "prob_flat": 0.2093,
+      "prob_down": 0.1693,
+      "ci80_low_return": -0.10012,
+      "ci80_high_return": 0.29563,
+      "ci80_low_level": 36105.44,
+      "ci80_high_level": 51983.57,
+      "key_drivers": {
+        "3–12個月價格動能": 99.19,
+        "代表籃子市場寬度": -83.37,
+        "上市整體營收年增動能": 99.38,
+        "季線扣抵中期支撐": -99.68,
+        "信用利差與VIX總經環境": -83.21
+      }
+    },
+    "6_12m": {
+      "horizon_key": "6_12m",
+      "label": "6–12 個月",
+      "anchor_trading_days": 180,
+      "quant_score": 82.22,
+      "expected_return": 0.34313,
+      "std_dev": 0.26099,
+      "prob_up": 0.8433,
+      "prob_flat": 0.1042,
+      "prob_down": 0.0525,
+      "ci80_low_return": 0.00866,
+      "ci80_high_return": 0.6776,
+      "ci80_low_level": 40469.78,
+      "ci80_high_level": 67309.36,
+      "key_drivers": {
+        "3–12個月價格動能": 99.19,
+        "上市中位數P/B與P/E估值": 73.92,
+        "美債殖利率利差與信用風險": 66.4,
+        "上市月營收正成長廣度": 88.64
+      }
+    },
+    "1_3y": {
+      "horizon_key": "1_3y",
+      "label": "1–3 年",
+      "anchor_trading_days": 375,
+      "quant_score": 31.9,
+      "expected_return": 0.49447,
+      "std_dev": 0.32835,
+      "prob_up": 0.873,
+      "prob_flat": 0.0964,
+      "prob_down": 0.0306,
+      "ci80_low_return": 0.07368,
+      "ci80_high_return": 0.91527,
+      "ci80_low_level": 43078.42,
+      "ci80_high_level": 76845.15,
+      "key_drivers": {
+        "上市中位數P/B長線估值錨": 84.03,
+        "台股風險溢酬ERP": -14.34,
+        "美債殖利率曲線與信用週期": 66.4,
+        "5年位階均值回歸錨": -43.28
+      }
+    }
+  }
+}
