@@ -119,7 +119,11 @@ def _extract_grounding_notes(response: Any, limit: int = 5) -> list[str]:
     return notes
 
 
-def _build_prompts(briefing_md: str, quant_result: dict[str, Any]) -> tuple[str, str]:
+def _build_prompts(
+    briefing_md: str,
+    quant_result: dict[str, Any],
+    calibration_profile: dict[str, Any] | None = None,
+) -> tuple[str, str]:
     """組裝台灣中文系統提示詞與包含定量簡報之使用者提示詞。"""
     system_instruction = (
         "你是台灣股市大型法人研究團隊的投資長（CIO），必須同時綜合「多頭代理人」、"
@@ -132,20 +136,25 @@ def _build_prompts(briefing_md: str, quant_result: dict[str, Any]) -> tuple[str,
         "2. 絕對不得編造或竄改第一層簡報中的官方指數收盤點位、估值、籌碼或歷史誤差數據。"
         "若即時搜尋結果中的新聞點位與簡報基準日官方收盤不同，以簡報基準官方收盤為基準。\n"
         f"3. 每個週期（1_4w、1_3m、3_6m、6_12m、1_3y）的 ai_score 與簡報中的 quant_score 差距"
-        f"必須控制在 ±{MAX_AI_SCORE_DELTA:.0f} 分以內，調整必須有清楚的因果證據"
+        f"必須嚴格控制在下方指定之各週期合法調整上限內（預設 ±{MAX_AI_SCORE_DELTA:.0f} 分；"
+        "若歷史主觀調整落後量化，系統會自動收緊上限），調整必須有清楚的因果證據"
         "（不可單純附和量化分數，亦不可過度自信）。\n"
-        "4. 若簡報第四節列有近期已結算之 Brier Score 與誤差回顧，必須於決策中主動檢討並校準誤差。\n"
+        "4. 必須詳閱簡報第四節之「滾動偏差與自我校準診斷表」及「近期高信心誤判警示」："
+        "若系統標註過往存在系統性偏多高估或偏空低估，本週裁決必須主動收斂偏差並檢討過往誤判。\n"
         "5. 必須明確給出每個週期的 invalidation_level（失效關鍵點位）與整體 target_allocation（0.0~1.0）。"
     )
 
     q_horizons = quant_result.get("horizons") or {}
+    cal_by_h = (calibration_profile or {}).get("by_horizon") or {}
     bounds_lines = []
     for spec in HORIZONS:
         q_score = float((q_horizons.get(spec.key) or {}).get("quant_score", 0.0))
-        low_b = max(-100.0, q_score - MAX_AI_SCORE_DELTA)
-        high_b = min(100.0, q_score + MAX_AI_SCORE_DELTA)
+        h_max_delta = float((cal_by_h.get(spec.key) or {}).get("max_ai_delta", MAX_AI_SCORE_DELTA))
+        low_b = max(-100.0, q_score - h_max_delta)
+        high_b = min(100.0, q_score + h_max_delta)
         bounds_lines.append(
-            f"- {spec.key}（{spec.label}）：quant_score = {q_score:+.2f}，合法 ai_score 範圍 [{low_b:+.2f}, {high_b:+.2f}]"
+            f"- {spec.key}（{spec.label}）：quant_score = {q_score:+.2f}，"
+            f"本週允許調整上限 ±{h_max_delta:.0f} 分，合法 ai_score 範圍 [{low_b:+.2f}, {high_b:+.2f}]"
         )
 
     user_prompt = (
@@ -186,6 +195,7 @@ def generate_ai_forecast(
     features: dict[str, Any],
     model_name: str = DEFAULT_GEMINI_MODEL,
     thinking_level: str = DEFAULT_THINKING_LEVEL,
+    calibration_profile: dict[str, Any] | None = None,
     client: Any | None = None,
 ) -> dict[str, Any]:
     """呼叫 Gemini API（預設 gemini-4-neon）產生經受限驗證之五週期預測 JSON。"""
@@ -204,7 +214,9 @@ def generate_ai_forecast(
             )
         client = genai.Client(api_key=api_key)
 
-    system_instruction, user_prompt = _build_prompts(briefing_md, quant_result)
+    system_instruction, user_prompt = _build_prompts(
+        briefing_md, quant_result, calibration_profile=calibration_profile
+    )
     grounding_notes: list[str] = []
 
     primary_config = types.GenerateContentConfig(
@@ -251,7 +263,7 @@ def generate_ai_forecast(
             model=model_name,
             contents=(
                 "請將以下台灣股市多空辯證研究備忘錄嚴格轉換為指定 JSON 結構，"
-                "務必保留所有具體點位與 ±25 分限制：\n\n" + research_text
+                "務必保留所有具體點位與各週期合法調整上限：\n\n" + research_text
             ),
             config=json_config,
         )
@@ -262,5 +274,7 @@ def generate_ai_forecast(
         model_name=model_name,
         grounding_notes=grounding_notes,
     )
-    finalized = validate_and_finalize_ai_submission(raw_payload, quant_result, features)
+    finalized = validate_and_finalize_ai_submission(
+        raw_payload, quant_result, features, calibration_profile=calibration_profile
+    )
     return to_plain_dict(finalized)

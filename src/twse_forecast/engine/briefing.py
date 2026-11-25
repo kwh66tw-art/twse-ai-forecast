@@ -12,6 +12,7 @@ from twse_forecast.engine.quant_baseline import (
     normalize_three_probs,
     score_to_calibrated_forecast,
 )
+from twse_forecast.evaluation.calibration import render_calibration_diagnostics_markdown
 from twse_forecast.models import AIForecastSubmission, HorizonAIForecast, to_plain_dict
 
 
@@ -22,6 +23,7 @@ def render_briefing_markdown(
     quant_result: dict[str, Any],
     recent_settled_reviews: list[dict[str, Any]],
     collector_reports: list[dict[str, Any]],
+    calibration_profile: dict[str, Any] | None = None,
 ) -> str:
     """產出供 AI 多頭／空頭／投資長辯證推理閱讀的結構化 Markdown 簡報包。"""
     cross = features.get("cross_market") or {}
@@ -65,7 +67,7 @@ def render_briefing_markdown(
         "",
         "### 3. 台股微結構與法人／散戶籌碼",
         f"- 近 5 日現貨買賣超（億元）：外資 `{micro.get('foreign_5d_net_b')}` ｜ 投信 `{micro.get('trust_5d_net_b')}` ｜ 自營商自行 `{micro.get('dealer_prop_5d_net_b')}`",
-        f"- 外資台指期（TX）淨未平倉口數：`{micro.get('foreign_tx_net_oi')}` ｜ 選擇權 Put/Call Ratio：`{micro.get('pc_ratio_latest_pct')}%`（5 日均 `{micro.get('pc_ratio_5d_avg_pct')}%`）",
+        f"- 外資台指期（TX）淨未平倉口數：`{micro.get('foreign_tx_net_oi')}` ｜ 選擇權 Put/Call Ratio：`{micro.get('pc_ratio_latest_pct')}%`（5 日均 `{micro.get('pc_ratio_5d_avg_pct')}%`、較 20 日均邊際變化 `{micro.get('pc_ratio_20d_diff')}%`）",
         f"- 大盤融資餘額：`{micro.get('margin_balance_b')}` 億元（單日增減 `{micro.get('margin_change_1d_pct')}%`） ｜ 上漲／下跌家數：`{micro.get('twse_advancing_count')}` / `{micro.get('twse_declining_count')}`",
         "",
         "### 4. 多週期 K 線技術與拉積盤寬度",
@@ -107,9 +109,9 @@ def render_briefing_markdown(
         )
 
     lines.extend(["", "## 四、近期已結算預測誤差回顧（自我校準參考）"])
-    if not recent_settled_reviews:
-        lines.append("- 尚無已到期結算之歷史預測紀錄（本次為初始追蹤累積期）。")
-    else:
+    lines.extend(render_calibration_diagnostics_markdown(calibration_profile))
+    if recent_settled_reviews:
+        lines.extend(["", "### 最新已結算樣本明細"])
         for rev in recent_settled_reviews:
             lines.append(
                 f"- `{rev['record_id']}` [{rev['horizon_label']}]：AI 預測 `{rev['ai_expected_return']*100:+.2f}%` vs 實際 `{rev['actual_return']*100:+.2f}%`（方向命中：`{rev['ai_hit']}`，AI Brier：`{rev['ai_brier']:.4f}` vs 量化 Brier：`{rev['quant_brier']:.4f}`）"
@@ -117,8 +119,8 @@ def render_briefing_markdown(
 
     lines.extend([
         "",
-        "## 五、AI 辯證 JSON 輸出格式契約（`Bounded Override ±25`）",
-        f"請根據上方完整數據與當週最新財經情報，輸出合法 JSON 並儲存至 `data/snapshots/latest_ai_forecast.json`；每個週期的 `ai_score` 與 `quant_score` 差距將強制受限於 `±{MAX_AI_SCORE_DELTA:.0f}` 分內。",
+        "## 五、AI 辯證 JSON 輸出格式契約（`Bounded Override`）",
+        f"請根據上方完整數據與當週最新財經情報，輸出合法 JSON 並儲存至 `data/snapshots/latest_ai_forecast.json`；每個週期的 `ai_score` 與 `quant_score` 差距將強制受限於該週期允許調整上限（預設 `±{MAX_AI_SCORE_DELTA:.0f}` 分）內。",
     ])
     return "\n".join(lines)
 
@@ -127,11 +129,15 @@ def validate_and_finalize_ai_submission(
     raw_payload: dict[str, Any],
     quant_result: dict[str, Any],
     features: dict[str, Any],
+    *,
+    calibration_profile: dict[str, Any] | None = None,
 ) -> AIForecastSubmission:
-    """驗證 AI 提交之 JSON，強制套用 ±25 分調整邊界並確保機率分布總和恆等於 1.0。"""
+    """驗證 AI 提交之 JSON，強制套用動態調整邊界並確保條件波動率與機率分布總和恆等於 1.0。"""
     latest_close = float(features["reference_taiex_close"])
     hist_stats = features.get("historical_horizon_stats") or {}
     tech = features.get("technicals") or {}
+    realized_vol_20d = tech.get("realized_vol_20d")
+    cal_by_h = (calibration_profile or {}).get("by_horizon") or {}
     raw_horizons = raw_payload.get("horizons") or {}
     quant_horizons = quant_result["horizons"]
 
@@ -145,9 +151,13 @@ def validate_and_finalize_ai_submission(
         if not isinstance(user_h, dict):
             raise ValueError(f"AI 預測缺少必要週期：{spec.key}")
 
+        h_cal = cal_by_h.get(spec.key) or {}
+        max_delta = float(h_cal.get("max_ai_delta", MAX_AI_SCORE_DELTA))
+        vol_mult = float(h_cal.get("vol_multiplier", 1.0))
+
         requested_score = float(user_h.get("ai_score", q_score))
         raw_delta = requested_score - q_score
-        clamped_delta = max(-MAX_AI_SCORE_DELTA, min(MAX_AI_SCORE_DELTA, raw_delta))
+        clamped_delta = max(-max_delta, min(max_delta, raw_delta))
         final_ai_score = round(max(-100.0, min(100.0, q_score + clamped_delta)), 2)
         ai_scores[spec.key] = final_ai_score
 
@@ -155,7 +165,7 @@ def validate_and_finalize_ai_submission(
         hist_mean = float(h_stat.get("mean_return", 0.02))
         hist_std = float(h_stat.get("std_return", 0.05))
 
-        # 使用一致的統計轉換取得基準校準值
+        # 與第一層純量化共用完全一致之貝氏漂移收縮、條件波動率與經驗波動率校準乘數
         calibrated = score_to_calibrated_forecast(
             spec=spec,
             score=final_ai_score,
@@ -163,6 +173,8 @@ def validate_and_finalize_ai_submission(
             hist_mean=hist_mean,
             hist_std=hist_std,
             key_drivers={},
+            realized_vol_20d=realized_vol_20d,
+            vol_multiplier=vol_mult,
         )
 
         # 若 AI 自行微調機率且未超過界限，或直接沿用分數換算校準機率，皆強制正規化總和=1.0
@@ -170,7 +182,7 @@ def validate_and_finalize_ai_submission(
             "prob_up" in user_h
             and "prob_flat" in user_h
             and "prob_down" in user_h
-            and abs(raw_delta) <= MAX_AI_SCORE_DELTA
+            and abs(raw_delta) <= max_delta
         ):
             p_up, p_flat, p_down = normalize_three_probs(
                 float(user_h["prob_up"]),

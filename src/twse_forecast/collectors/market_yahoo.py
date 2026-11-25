@@ -35,8 +35,13 @@ def roc_to_iso_date(roc_date: str) -> str | None:
         return None
 
 
-def parse_yahoo_chart_payload(symbol: str, payload: dict[str, Any]) -> MarketSeries:
-    """解析 Yahoo Finance v8 chart JSON 為標準 OHLCVBar 序列。"""
+def parse_yahoo_chart_payload(
+    symbol: str,
+    payload: dict[str, Any],
+    *,
+    now_taipei: datetime | None = None,
+) -> MarketSeries:
+    """解析 Yahoo Finance v8 chart JSON 為標準 OHLCVBar 序列（自動剔除台股盤中未完成日 K）。"""
     chart = payload.get("chart") or {}
     results = chart.get("result") or []
     if not results:
@@ -87,6 +92,15 @@ def parse_yahoo_chart_payload(symbol: str, payload: dict[str, Any]) -> MarketSer
         )
 
     sorted_bars = [bars_by_date[d] for d in sorted(bars_by_date)]
+    # 若為台股商品且當前為週一至週五 13:45 收盤結算前，剔除當日尚未收盤的盤中殘缺 K 棒
+    is_tw_symbol = symbol == "^TWII" or symbol.endswith(".TW")
+    if is_tw_symbol and len(sorted_bars) > 1:
+        ref_now = now_taipei.astimezone(TAIPEI_TZ) if now_taipei else datetime.now(TAIPEI_TZ)
+        if ref_now.weekday() < 5 and (ref_now.hour, ref_now.minute) < (13, 45):
+            today_str = ref_now.strftime("%Y-%m-%d")
+            if sorted_bars[-1].date == today_str:
+                sorted_bars.pop()
+
     if not sorted_bars:
         raise ValueError(f"Yahoo Finance 無法解析有效 K 線 ({symbol})")
     return MarketSeries(symbol=symbol, bars=sorted_bars)

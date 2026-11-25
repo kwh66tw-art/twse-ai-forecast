@@ -37,18 +37,20 @@ def parse_fred_csv(csv_text: str) -> list[tuple[str, float]]:
     return rows
 
 
-def collect_fred_macro(*, timeout_sec: float = 15.0) -> tuple[dict[str, Any], CollectorReport]:
+def collect_fred_macro(*, timeout_sec: float = 20.0) -> tuple[dict[str, Any], CollectorReport]:
     """擷取美債 10 年殖利率、10Y-2Y 利差與高收益債信用利差。"""
     fetched_at = now_taipei_iso()
     metrics: dict[str, Any] = {}
     errors: dict[str, str] = {}
+    clean_headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
 
     start_date = (date.today() - timedelta(days=730)).isoformat()
-    with httpx.Client(timeout=timeout_sec, follow_redirects=True) as client:
+    with httpx.Client(timeout=timeout_sec, follow_redirects=True, headers=clean_headers) as client:
         for key, series_id in FRED_SERIES.items():
             url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}&cosd={start_date}"
             try:
-                resp = fetch_with_retry(client, url, retries=1)
+                resp = client.get(url)
+                resp.raise_for_status()
                 obs = parse_fred_csv(resp.text)
                 if not obs:
                     raise ValueError("無有效觀測值")

@@ -33,6 +33,7 @@ from twse_forecast.engine.gemini_agent import (
 )
 from twse_forecast.engine.quant_baseline import run_quant_baseline
 from twse_forecast.evaluation.audit import settle_matured_predictions, summarize_monthly_audit
+from twse_forecast.evaluation.calibration import compute_calibration_profile
 from twse_forecast.features.feature_builder import build_feature_snapshot
 from twse_forecast.ledger.store import (
     append_prediction_record,
@@ -70,6 +71,12 @@ def _load_core_series(path: Path) -> dict[str, MarketSeries]:
     return out
 
 
+def _load_optional_json(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def cmd_prepare_weekly(args: argparse.Namespace) -> int:
     paths = ProjectPaths(root=Path(args.root))
     paths.ensure_dirs()
@@ -88,19 +95,7 @@ def cmd_prepare_weekly(args: argparse.Namespace) -> int:
 
     collector_reports = [to_plain_dict(r) for r in (r_yahoo, r_twse, r_taifex, r_fred, r_sent)]
 
-    print("[3/5] 正在建置多週期特徵快照與計算第一層純量化基準...", flush=True)
-    features = build_feature_snapshot(
-        series_map=series_map,
-        yahoo_summary=yahoo_summary,
-        twse_payload=twse_payload,
-        taifex_payload=taifex_payload,
-        fred_payload=fred_payload,
-        sentiment_payload=sentiment_payload,
-    )
-    quant_result_obj = run_quant_baseline(features)
-    quant_result = to_plain_dict(quant_result_obj)
-
-    print("[4/5] 正在檢查並結算已到期之歷史預測...")
+    print("[3/5] 正在結算已到期歷史預測並計算閉環自我校準參數...", flush=True)
     records = load_ledger_records(paths)
     existing_settlements = load_all_settlements(paths)
     existing_ids = {s["settlement_id"] for s in existing_settlements}
@@ -109,6 +104,19 @@ def cmd_prepare_weekly(args: argparse.Namespace) -> int:
     )
     inserted = save_settlements(paths, new_settled)
     all_settlements = existing_settlements + new_settled
+    calibration_profile = compute_calibration_profile(records, all_settlements)
+
+    print("[4/5] 正在建置多週期特徵快照與計算第一層純量化基準...", flush=True)
+    features = build_feature_snapshot(
+        series_map=series_map,
+        yahoo_summary=yahoo_summary,
+        twse_payload=twse_payload,
+        taifex_payload=taifex_payload,
+        fred_payload=fred_payload,
+        sentiment_payload=sentiment_payload,
+    )
+    quant_result_obj = run_quant_baseline(features, calibration_profile=calibration_profile)
+    quant_result = to_plain_dict(quant_result_obj)
 
     schedule_meta = compute_schedule_metadata()
     record_id = args.record_id or schedule_meta["record_id"]
@@ -116,6 +124,7 @@ def cmd_prepare_weekly(args: argparse.Namespace) -> int:
     # 儲存中繼快照
     save_json_file(paths.snapshots_dir / "latest_core_series.json", _serialize_core_series(series_map))
     save_json_file(paths.snapshots_dir / "latest_features.json", features)
+    save_json_file(paths.snapshots_dir / "latest_calibration.json", calibration_profile)
     save_json_file(paths.snapshots_dir / "latest_quant_baseline.json", quant_result)
     save_json_file(paths.snapshots_dir / "latest_collector_reports.json", collector_reports)
 
@@ -126,6 +135,7 @@ def cmd_prepare_weekly(args: argparse.Namespace) -> int:
         quant_result=quant_result,
         recent_settled_reviews=all_settlements[-4:],
         collector_reports=collector_reports,
+        calibration_profile=calibration_profile,
     )
     briefing_path = paths.snapshots_dir / "latest_briefing.md"
     briefing_path.write_text(briefing_md, encoding="utf-8")
@@ -161,8 +171,11 @@ def cmd_commit_weekly(args: argparse.Namespace) -> int:
     quant_result = json.loads(quant_path.read_text(encoding="utf-8"))
     core_series = _load_core_series(core_series_path)
     raw_ai = json.loads(ai_json_path.read_text(encoding="utf-8"))
+    calibration_profile = _load_optional_json(paths.snapshots_dir / "latest_calibration.json")
 
-    ai_submission = validate_and_finalize_ai_submission(raw_ai, quant_result, features)
+    ai_submission = validate_and_finalize_ai_submission(
+        raw_ai, quant_result, features, calibration_profile=calibration_profile
+    )
     schedule_meta = compute_schedule_metadata()
     if args.record_id:
         schedule_meta["record_id"] = args.record_id
@@ -252,6 +265,7 @@ def cmd_monthly_audit(args: argparse.Namespace) -> int:
     audit_summary = summarize_monthly_audit(
         records, all_settlements, core_series["^TWII"], core_series["0050.TW"]
     )
+    calibration_profile = compute_calibration_profile(records, all_settlements)
     audit_month = args.month or datetime.now(TAIPEI_TZ).strftime("%Y-%m")
     monthly_md = render_monthly_audit_report(
         audit_month=audit_month,
@@ -259,6 +273,7 @@ def cmd_monthly_audit(args: argparse.Namespace) -> int:
         ledger_valid=is_valid,
         ledger_issues=issues,
         recent_settlements=all_settlements,
+        calibration_profile=calibration_profile,
     )
     out_path = paths.monthly_reports_dir / f"{audit_month}-audit.md"
     write_monthly_report(out_path, monthly_md)
@@ -315,6 +330,7 @@ def cmd_generate_ai(args: argparse.Namespace) -> int:
     briefing_md = briefing_path.read_text(encoding="utf-8")
     features = json.loads(features_path.read_text(encoding="utf-8"))
     quant_result = json.loads(quant_path.read_text(encoding="utf-8"))
+    calibration_profile = _load_optional_json(paths.snapshots_dir / "latest_calibration.json")
 
     model_name = (args.model or os.environ.get("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL).strip()
     thinking_level = (
@@ -328,6 +344,7 @@ def cmd_generate_ai(args: argparse.Namespace) -> int:
         features=features,
         model_name=model_name,
         thinking_level=thinking_level,
+        calibration_profile=calibration_profile,
     )
 
     raw_out = Path(args.output)

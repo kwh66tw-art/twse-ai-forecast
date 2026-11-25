@@ -41,10 +41,15 @@ def parse_taifex_pc_ratio(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
     valid.sort(key=lambda x: x[0])
     recent_5 = [x[1] for x in valid[-5:]]
+    recent_20 = [x[1] for x in valid[-20:]]
+    avg_20 = sum(recent_20) / len(recent_20)
+    latest_v = valid[-1][1]
     return {
         "latest_date": valid[-1][0],
-        "latest_pc_ratio_pct": round(valid[-1][1], 2),
+        "latest_pc_ratio_pct": round(latest_v, 2),
         "avg_5d_pc_ratio_pct": round(sum(recent_5) / len(recent_5), 2),
+        "avg_20d_pc_ratio_pct": round(avg_20, 2),
+        "pc_ratio_20d_diff": round(latest_v - avg_20, 2),
     }
 
 

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from twse_forecast.config import HORIZONS
+from twse_forecast.evaluation.calibration import render_calibration_diagnostics_markdown
 
 
 def render_monthly_audit_report(
@@ -15,6 +16,7 @@ def render_monthly_audit_report(
     ledger_valid: bool,
     ledger_issues: list[str],
     recent_settlements: list[dict[str, Any]],
+    calibration_profile: dict[str, Any] | None = None,
 ) -> str:
     """產出月度績效評估與 AI 能力實證稽核報告。"""
     sp = audit_summary.get("shadow_portfolio") or {}
@@ -109,6 +111,10 @@ def render_monthly_audit_report(
                 f"`{s['actual_return']*100:+.2f}%` | `{s['actual_outcome']}` | "
                 f"`{s['ai_pred_class']}` ({'✓' if s['ai_hit'] else '✗'}) | `{s['ai_brier']:.4f}` | `{s['quant_brier']:.4f}` |"
             )
+
+    if calibration_profile and calibration_profile.get("total_settled", 0) > 0:
+        lines.extend(["", "## 五、閉環自我校準與動態授權韁繩狀態"])
+        lines.extend(render_calibration_diagnostics_markdown(calibration_profile))
 
     return "\n".join(lines) + "\n"
 

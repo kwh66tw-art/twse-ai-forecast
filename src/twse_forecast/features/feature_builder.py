@@ -124,6 +124,8 @@ def build_feature_snapshot(
         "foreign_tx_net_oi": fut_oi.get("foreign_tx_net_oi"),
         "pc_ratio_latest_pct": pc_ratio.get("latest_pc_ratio_pct"),
         "pc_ratio_5d_avg_pct": pc_ratio.get("avg_5d_pc_ratio_pct"),
+        "pc_ratio_20d_avg_pct": pc_ratio.get("avg_20d_pc_ratio_pct"),
+        "pc_ratio_20d_diff": pc_ratio.get("pc_ratio_20d_diff"),
         "margin_balance_b": margin.get("margin_balance_b"),
         "margin_change_1d_pct": margin.get("margin_change_1d_pct"),
         "twse_advancing_count": twse_breadth.get("advancing"),
