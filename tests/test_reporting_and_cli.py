@@ -103,6 +103,9 @@ def test_reports_and_dashboard_rendering(tmp_path: Path) -> None:
         ledger_issues=[],
     )
     assert "SHA-256 雜湊鏈驗證通過" in dash_html
+    assert 'id="deploy-stamp"' in dash_html
+    assert "預測資料鎖定：" in dash_html
+    assert "charts/horizons_forecast.png?v=" in dash_html
     assert "<!DOCTYPE html>" in dash_html
 
     # 測試空白帳本 verify-ledger CLI 通過

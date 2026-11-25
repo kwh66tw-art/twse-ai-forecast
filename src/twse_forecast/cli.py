@@ -314,6 +314,37 @@ def cmd_verify_ledger(args: argparse.Namespace) -> int:
     return 1
 
 
+def cmd_render_dashboard(args: argparse.Namespace) -> int:
+    """唯讀讀取既有帳本與本地快取序列，重新產出網頁儀表板（不修改任何帳本紀錄）。"""
+    paths = ProjectPaths(root=Path(args.root))
+    paths.ensure_dirs()
+
+    records = load_ledger_records(paths)
+    settlements = load_all_settlements(paths)
+    is_valid, issues, _ = verify_ledger(paths)
+    features = _load_optional_json(paths.snapshots_dir / "latest_features.json")
+
+    core_series_path = paths.snapshots_dir / "latest_core_series.json"
+    audit_summary = None
+    if core_series_path.exists():
+        core_series = _load_core_series(core_series_path)
+        if "^TWII" in core_series and "0050.TW" in core_series:
+            audit_summary = summarize_monthly_audit(
+                records, settlements, core_series["^TWII"], core_series["0050.TW"]
+            )
+
+    dash_html = render_dashboard_html(
+        records=records,
+        latest_features=features,
+        audit_summary=audit_summary,
+        ledger_valid=is_valid,
+        ledger_issues=issues,
+    )
+    write_dashboard_html(paths.dashboard_html, dash_html)
+    print(f"儀表板已重新產出（含最新時間戳記）：{paths.dashboard_html}")
+    return 0
+
+
 def cmd_generate_ai(args: argparse.Namespace) -> int:
     paths = ProjectPaths(root=Path(args.root))
     paths.ensure_dirs()
@@ -470,6 +501,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_ver = sub.add_parser("verify-ledger", help="驗證預測帳本 SHA-256 雜湊鏈完整性")
     p_ver.add_argument("--root", default=str(DEFAULT_PROJECT_ROOT), help="工作區根目錄")
     p_ver.set_defaults(func=cmd_verify_ledger)
+
+    p_dash = sub.add_parser("render-dashboard", help="唯讀重新產出網頁儀表板與最新時間戳記")
+    p_dash.add_argument("--root", default=str(DEFAULT_PROJECT_ROOT), help="工作區根目錄")
+    p_dash.set_defaults(func=cmd_render_dashboard)
 
     p_sync = sub.add_parser("sync-gdrive", help="將最新報表、視覺化圖表與帳本同步至 Google Drive")
     p_sync.add_argument("--folder-id", default=None, help="目標 Google Drive 資料夾 ID（預設讀 GDRIVE_FOLDER_ID）")

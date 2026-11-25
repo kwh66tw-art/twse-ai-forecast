@@ -3,10 +3,45 @@
 from __future__ import annotations
 
 import html
+import subprocess
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from twse_forecast.config import HORIZONS
+from twse_forecast.config import DEFAULT_PROJECT_ROOT, HORIZONS, TAIPEI_TZ
+
+
+def _format_taipei_ts(raw_iso: str | None) -> str:
+    """將 ISO 時間字串統一格式化為易讀之台灣時間 YYYY-MM-DD HH:MM:SS (UTC+8)。"""
+    if not raw_iso or raw_iso == "-":
+        return "-"
+    try:
+        dt = datetime.fromisoformat(raw_iso).astimezone(TAIPEI_TZ)
+        return dt.strftime("%Y-%m-%d %H:%M:%S (UTC+8)")
+    except ValueError:
+        return raw_iso
+
+
+def _detect_git_revision(project_root: Path | None = None) -> dict[str, str]:
+    """安全讀取當前 Git 最新 Commit 短碼、時間與標題（若無 Git 環境則靜默回傳空字串）。"""
+    cwd = project_root or DEFAULT_PROJECT_ROOT
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", str(cwd), "log", "-1", "--format=%h%n%ct%n%s"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=2.0,
+        ).splitlines()
+        if len(out) >= 3:
+            short_sha = out[0].strip()
+            commit_ts = datetime.fromtimestamp(int(out[1].strip()), tz=TAIPEI_TZ).strftime(
+                "%Y-%m-%d %H:%M:%S (UTC+8)"
+            )
+            subject = out[2].strip()
+            return {"short_sha": short_sha, "committed_at": commit_ts, "subject": subject}
+    except Exception:  # noqa: BLE001
+        pass
+    return {"short_sha": "", "committed_at": "", "subject": ""}
 
 
 def _build_equity_svg(curve: list[dict[str, Any]]) -> str:
@@ -215,7 +250,23 @@ def render_dashboard_html(
         )
 
     equity_svg = _build_equity_svg(curve)
-    updated_at = html.escape((audit_summary or {}).get("generated_at") or (latest["executed_at_iso"] if latest else "-"))
+    now_tw = datetime.now(TAIPEI_TZ)
+    rendered_at_str = now_tw.strftime("%Y-%m-%d %H:%M:%S (UTC+8)")
+    cache_ver = str(int(now_tw.timestamp()))
+    forecast_locked_at = html.escape(_format_taipei_ts(latest["executed_at_iso"]) if latest else "尚無紀錄")
+    audit_generated_at = html.escape(
+        _format_taipei_ts((audit_summary or {}).get("generated_at")) if audit_summary else rendered_at_str
+    )
+
+    git_rev = _detect_git_revision()
+    if git_rev["short_sha"]:
+        subj_short = git_rev["subject"][:52] + ("..." if len(git_rev["subject"]) > 52 else "")
+        default_deploy_stamp = (
+            f"{rendered_at_str} ｜ 本機版本 <code>{html.escape(git_rev['short_sha'])}</code>"
+            f"（{html.escape(subj_short)} · 提交於 {html.escape(git_rev['committed_at'])}）"
+        )
+    else:
+        default_deploy_stamp = f"{rendered_at_str}（本機即時產出）"
 
     return f"""<!DOCTYPE html>
 <html lang="zh-Hant">
@@ -246,9 +297,17 @@ def render_dashboard_html(
   }}
   .container {{ max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }}
   header {{
-    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;
+    display: flex; flex-direction: column; gap: 12px;
     padding: 18px 22px; background: var(--card); border: 1px solid var(--border); border-radius: 12px;
   }}
+  .header-top {{ display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }}
+  .stamp-bar {{
+    display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center;
+    padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted);
+  }}
+  .stamp-item strong {{ color: #cbd5e1; font-weight: 600; }}
+  .stamp-item a {{ color: var(--accent); text-decoration: none; }}
+  .stamp-item a:hover {{ text-decoration: underline; }}
   h1 {{ margin: 0; font-size: 22px; font-weight: 700; }}
   h2 {{ margin: 0 0 12px 0; font-size: 16px; color: var(--accent); }}
   h3 {{ margin: 0 0 6px 0; font-size: 14px; }}
@@ -304,11 +363,18 @@ def render_dashboard_html(
 <body>
   <div class="container">
     <header>
-      <div>
-        <h1>台灣股市大盤多週期 AI 預測與實證儀表板</h1>
-        <div class="subtitle">{latest_title} ｜ 執行模型：{model_label} ｜ 更新時間：{updated_at}</div>
+      <div class="header-top">
+        <div>
+          <h1>台灣股市大盤多週期 AI 預測與實證儀表板</h1>
+          <div class="subtitle">{latest_title} ｜ 執行模型：{model_label}</div>
+        </div>
+        <div class="badge {badge_cls}">{badge_txt}</div>
       </div>
-      <div class="badge {badge_cls}">{badge_txt}</div>
+      <div class="stamp-bar">
+        <span class="stamp-item"><strong>預測資料鎖定：</strong>{forecast_locked_at}</span>
+        <span class="stamp-item"><strong>績效稽核重算：</strong>{audit_generated_at}</span>
+        <span class="stamp-item"><strong>網頁部署／系統變更：</strong><span id="deploy-stamp">{default_deploy_stamp}</span></span>
+      </div>
     </header>
 
     <section class="kpi-strip">
@@ -351,15 +417,15 @@ def render_dashboard_html(
       <h2>視覺化績效追蹤與預測通道圖表（180 DPI 高解析快照）</h2>
       <div class="charts-gallery">
         <div>
-          <img class="chart-img" src="charts/horizons_forecast.png" alt="五週期預測機率與點位通道圖" />
+          <img class="chart-img" src="charts/horizons_forecast.png?v={cache_ver}" alt="五週期預測機率與點位通道圖" />
           <div class="chart-caption">五週期多／盤／空機率分布與 80% 信賴點位通道</div>
         </div>
         <div>
-          <img class="chart-img" src="charts/performance_tracking.png" alt="模擬投資組合淨值與回檔追蹤圖" />
+          <img class="chart-img" src="charts/performance_tracking.png?v={cache_ver}" alt="模擬投資組合淨值與回檔追蹤圖" />
           <div class="chart-caption">模擬投資組合淨值走勢、回檔保護與建議持股水位</div>
         </div>
         <div>
-          <img class="chart-img" src="charts/ai_accuracy_scorecard.png" alt="AI 能力實證計分卡圖" />
+          <img class="chart-img" src="charts/ai_accuracy_scorecard.png?v={cache_ver}" alt="AI 能力實證計分卡圖" />
           <div class="chart-caption">AI 模型 vs. 純量化基準 Brier Score 與命中率計分卡</div>
         </div>
       </div>
