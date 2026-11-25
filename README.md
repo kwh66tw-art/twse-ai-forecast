@@ -41,6 +41,14 @@ git push -u origin main
 - 預設模型為 `gemini-4-neon`（`thinking_level="high"`）。
 - 若想改用較低成本模型或測試不同思考深度，可於手動執行 `workflow_dispatch` 輸入指定模型代碼（例如 `gemini-3.6-flash`），或調整環境變數 `GEMINI_MODEL` 與 `GEMINI_THINKING_LEVEL`。
 
+### 5. （選用）開啟 Google Drive 自動同步
+排程每週跑完後可自動將週報、月報（轉為原生 Google 文件）、3 張高解析視覺化 PNG 圖表、互動儀表板與帳本備份同步至指定 Google Drive 資料夾：
+1. 在 Google Drive 建立目標資料夾，從網址列複製資料夾 ID，放入 GitHub Secret `GDRIVE_FOLDER_ID`。
+2. 憑證設定（個人 `@gmail.com` 帳號務必使用 OAuth 2.0，以避開 Service Account 0GB 配額限制）：
+   - 於 Google Cloud Console 建立 OAuth 用戶端並取得離線 `Refresh Token`，將 `GDRIVE_CLIENT_ID`、`GDRIVE_CLIENT_SECRET`、`GDRIVE_REFRESH_TOKEN` 存入 GitHub Secrets；
+   - 或若使用 Google Workspace 共用雲端硬碟，改設定 `GDRIVE_SERVICE_ACCOUNT_JSON`。
+3. 未設定 `GDRIVE_FOLDER_ID` 時，雲端流程會自動安全略過同步步驟。
+
 ---
 
 ## 本機 CLI 常用指令

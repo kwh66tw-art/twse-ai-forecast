@@ -43,9 +43,14 @@ from twse_forecast.ledger.store import (
     verify_ledger,
 )
 from twse_forecast.models import MarketSeries, OHLCVBar, to_plain_dict
+from twse_forecast.reporting.charts import generate_all_charts
 from twse_forecast.reporting.dashboard import render_dashboard_html, write_dashboard_html
 from twse_forecast.reporting.monthly_report import render_monthly_audit_report, write_monthly_report
 from twse_forecast.reporting.weekly_report import render_weekly_report, write_weekly_report
+from twse_forecast.sync.gdrive_sync import (
+    has_gdrive_credentials_configured,
+    sync_project_outputs_to_gdrive,
+)
 
 
 def _serialize_core_series(series_map: dict[str, MarketSeries]) -> dict[str, Any]:
@@ -198,6 +203,11 @@ def cmd_commit_weekly(args: argparse.Namespace) -> int:
         ledger_issues=issues,
     )
     write_dashboard_html(paths.dashboard_html, dash_html)
+    generate_all_charts(
+        charts_dir=paths.dashboard_html.parent / "charts",
+        records=records,
+        audit_summary=audit_summary,
+    )
 
     print(f"已成功寫入不可竄改帳本：{record_id}（累計 {total} 筆）")
     print(f"SHA-256 雜湊碼：{record['record_hash']}")
@@ -266,6 +276,11 @@ def cmd_monthly_audit(args: argparse.Namespace) -> int:
         ledger_issues=issues,
     )
     write_dashboard_html(paths.dashboard_html, dash_html)
+    generate_all_charts(
+        charts_dir=paths.dashboard_html.parent / "charts",
+        records=records,
+        audit_summary=audit_summary,
+    )
 
     print(f"月度實證稽核報告已產出：{out_path}")
     print(f"儀表板已同步更新：{paths.dashboard_html}")
@@ -319,6 +334,17 @@ def cmd_generate_ai(args: argparse.Namespace) -> int:
     out_path = raw_out if raw_out.is_absolute() else (paths.root / raw_out)
     save_json_file(out_path, ai_dict)
     print(f"AI 辯證預測 JSON 已儲存並通過邊界驗證：{out_path}")
+    return 0
+
+
+def cmd_sync_gdrive(args: argparse.Namespace) -> int:
+    paths = ProjectPaths(root=Path(args.root))
+    results = sync_project_outputs_to_gdrive(paths, folder_id=args.folder_id)
+    if not results:
+        print("無可同步之報表或圖表檔案。")
+        return 0
+    for item in results:
+        print(f"[{item.action.upper()}] {item.drive_name} (id={item.file_id})")
     return 0
 
 
@@ -378,6 +404,14 @@ def cmd_run_weekly_cloud(args: argparse.Namespace) -> int:
         if rc != 0:
             return rc
 
+    if has_gdrive_credentials_configured():
+        print("偵測到 Google Drive 同步設定，正在上傳最新週報、月報與視覺化圖表...", flush=True)
+        rc_sync = cmd_sync_gdrive(argparse.Namespace(root=args.root, folder_id=None))
+        if rc_sync != 0:
+            return rc_sync
+    else:
+        print("提示：未設定 GDRIVE_FOLDER_ID 或憑證，略過 Google Drive 自動同步。")
+
     return cmd_verify_ledger(argparse.Namespace(root=args.root))
 
 
@@ -419,6 +453,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_ver = sub.add_parser("verify-ledger", help="驗證預測帳本 SHA-256 雜湊鏈完整性")
     p_ver.add_argument("--root", default=str(DEFAULT_PROJECT_ROOT), help="工作區根目錄")
     p_ver.set_defaults(func=cmd_verify_ledger)
+
+    p_sync = sub.add_parser("sync-gdrive", help="將最新報表、視覺化圖表與帳本同步至 Google Drive")
+    p_sync.add_argument("--folder-id", default=None, help="目標 Google Drive 資料夾 ID（預設讀 GDRIVE_FOLDER_ID）")
+    p_sync.add_argument("--root", default=str(DEFAULT_PROJECT_ROOT), help="工作區根目錄")
+    p_sync.set_defaults(func=cmd_sync_gdrive)
 
     p_cloud = sub.add_parser("run-weekly-cloud", help="雲端排程專用：一鍵執行資料擷取、Gemini 辯證、鎖定帳本與月度稽核")
     p_cloud.add_argument("--model", default=None, help="Gemini 模型代碼（預設 gemini-4-neon）")

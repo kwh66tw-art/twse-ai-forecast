@@ -296,6 +296,9 @@ def render_dashboard_html(
   .metric-item {{ background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }}
   .m-lbl {{ font-size: 11px; color: var(--muted); }}
   .m-val {{ font-size: 15px; font-weight: 600; }}
+  .charts-gallery {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 14px; }}
+  .chart-img {{ width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--border); display: block; }}
+  .chart-caption {{ font-size: 12px; color: var(--muted); margin-top: 6px; }}
 </style>
 </head>
 <body>
@@ -341,6 +344,24 @@ def render_dashboard_html(
           <thead><tr><th>週期</th><th>樣本</th><th>AI 命中</th><th>量化命中</th><th>AI Brier</th><th>量化 Brier</th><th>淨改善</th></tr></thead>
           <tbody>{"".join(brier_rows_html)}</tbody>
         </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>視覺化績效追蹤與預測通道圖表（180 DPI 高解析快照）</h2>
+      <div class="charts-gallery">
+        <div>
+          <img class="chart-img" src="charts/horizons_forecast.png" alt="五週期預測機率與點位通道圖" />
+          <div class="chart-caption">五週期多／盤／空機率分布與 80% 信賴點位通道</div>
+        </div>
+        <div>
+          <img class="chart-img" src="charts/performance_tracking.png" alt="模擬投資組合淨值與回檔追蹤圖" />
+          <div class="chart-caption">模擬投資組合淨值走勢、回檔保護與建議持股水位</div>
+        </div>
+        <div>
+          <img class="chart-img" src="charts/ai_accuracy_scorecard.png" alt="AI 能力實證計分卡圖" />
+          <div class="chart-caption">AI 模型 vs. 純量化基準 Brier Score 與命中率計分卡</div>
+        </div>
       </div>
     </section>
 
