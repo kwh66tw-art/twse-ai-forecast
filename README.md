@@ -49,6 +49,12 @@ git push -u origin main
    - 或若使用 Google Workspace 共用雲端硬碟，改設定 `GDRIVE_SERVICE_ACCOUNT_JSON`。
 3. 未設定 `GDRIVE_FOLDER_ID` 時，雲端流程會自動安全略過同步步驟。
 
+### 6. （選用）公開網頁版 Dashboard（GitHub Pages）
+系統已內建 [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)，並整合於每週排程結尾自動重新發佈：
+1. 在 GitHub 儲存庫 **Settings → General → Danger Zone** 將儲存庫設為 **Public**（所有金鑰與憑證皆存於 GitHub Secrets，程式碼與帳本均不含敏感資訊）。
+2. 前往 **Settings → Pages → Build and deployment → Source** 選擇 **GitHub Actions**。
+3. 發佈完成後即可直接開啟線上儀表板：<https://kwh66tw-art.github.io/twse-ai-forecast/>。
+
 ---
 
 ## 本機 CLI 常用指令

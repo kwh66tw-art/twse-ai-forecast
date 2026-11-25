@@ -32,9 +32,6 @@ on:
         default: ""
         type: string
 
-permissions:
-  contents: write
-
 concurrency:
   group: twse-weekly-forecast
   cancel-in-progress: false
@@ -43,6 +40,8 @@ jobs:
   weekly-forecast:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write
     env:
       TZ: Asia/Taipei
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -125,3 +124,31 @@ jobs:
             dashboard/charts/
             data/predictions_ledger.jsonl
           retention-days: 90
+
+  deploy-pages:
+    needs: weekly-forecast
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 檢出最新儀表板產出
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: 設定 GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: 上傳儀表板靜態產出
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dashboard
+
+      - name: 部署至 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
