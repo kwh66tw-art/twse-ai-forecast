@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import html
-import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from twse_forecast.config import DEFAULT_PROJECT_ROOT, HORIZONS, TAIPEI_TZ
+from twse_forecast.config import HORIZONS, TAIPEI_TZ
 
 
 def _format_taipei_ts(raw_iso: str | None) -> str:
@@ -20,28 +19,6 @@ def _format_taipei_ts(raw_iso: str | None) -> str:
         return dt.strftime("%Y-%m-%d %H:%M:%S (UTC+8)")
     except ValueError:
         return raw_iso
-
-
-def _detect_git_revision(project_root: Path | None = None) -> dict[str, str]:
-    """安全讀取當前 Git 最新 Commit 短碼、時間與標題（若無 Git 環境則靜默回傳空字串）。"""
-    cwd = project_root or DEFAULT_PROJECT_ROOT
-    try:
-        out = subprocess.check_output(
-            ["git", "-C", str(cwd), "log", "-1", "--format=%h%n%ct%n%s"],
-            stderr=subprocess.DEVNULL,
-            text=True,
-            timeout=2.0,
-        ).splitlines()
-        if len(out) >= 3:
-            short_sha = out[0].strip()
-            commit_ts = datetime.fromtimestamp(int(out[1].strip()), tz=TAIPEI_TZ).strftime(
-                "%Y-%m-%d %H:%M:%S (UTC+8)"
-            )
-            subject = out[2].strip()
-            return {"short_sha": short_sha, "committed_at": commit_ts, "subject": subject}
-    except Exception:  # noqa: BLE001
-        pass
-    return {"short_sha": "", "committed_at": "", "subject": ""}
 
 
 def _build_equity_svg(curve: list[dict[str, Any]]) -> str:
@@ -258,16 +235,6 @@ def render_dashboard_html(
         _format_taipei_ts((audit_summary or {}).get("generated_at")) if audit_summary else rendered_at_str
     )
 
-    git_rev = _detect_git_revision()
-    if git_rev["short_sha"]:
-        subj_short = git_rev["subject"][:52] + ("..." if len(git_rev["subject"]) > 52 else "")
-        default_deploy_stamp = (
-            f"{rendered_at_str} ｜ 本機版本 <code>{html.escape(git_rev['short_sha'])}</code>"
-            f"（{html.escape(subj_short)} · 提交於 {html.escape(git_rev['committed_at'])}）"
-        )
-    else:
-        default_deploy_stamp = f"{rendered_at_str}（本機即時產出）"
-
     return f"""<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -373,7 +340,7 @@ def render_dashboard_html(
       <div class="stamp-bar">
         <span class="stamp-item"><strong>預測資料鎖定：</strong>{forecast_locked_at}</span>
         <span class="stamp-item"><strong>績效稽核重算：</strong>{audit_generated_at}</span>
-        <span class="stamp-item"><strong>網頁部署／系統變更：</strong><span id="deploy-stamp">{default_deploy_stamp}</span></span>
+        <span class="stamp-item"><strong>網頁最後更新：</strong><span id="deploy-stamp">{rendered_at_str}</span></span>
       </div>
     </header>
 

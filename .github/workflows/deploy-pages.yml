@@ -31,37 +31,23 @@ jobs:
       - name: 檢出儀表板檔案
         uses: actions/checkout@v4
 
-      - name: 寫入台灣時間部署時間戳與最後變更版本
+      - name: 寫入台灣時間網頁更新時間戳
         run: |
           python3 - <<'PY'
-          import html, os, re, subprocess
+          import re
           from datetime import datetime
           from pathlib import Path
           from zoneinfo import ZoneInfo
 
-          tz = ZoneInfo("Asia/Taipei")
-          now_dt = datetime.now(tz)
+          now_dt = datetime.now(ZoneInfo("Asia/Taipei"))
           deploy_ts = now_dt.strftime("%Y-%m-%d %H:%M:%S (UTC+8)")
           epoch = str(int(now_dt.timestamp()))
-          repo = os.environ.get("GITHUB_REPOSITORY", "kwh66tw-art/twse-ai-forecast")
-          sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
-          short_sha = sha[:7]
-          commit_epoch = int(subprocess.check_output(["git", "log", "-1", "--format=%ct"], text=True).strip())
-          commit_ts = datetime.fromtimestamp(commit_epoch, tz=tz).strftime("%Y-%m-%d %H:%M:%S")
-          subject = subprocess.check_output(["git", "log", "-1", "--format=%s"], text=True).strip()
-          if len(subject) > 52:
-              subject = subject[:49] + "..."
 
-          stamp_html = (
-              f'{deploy_ts} ｜ 最新變更 <a href="https://github.com/{html.escape(repo)}/commit/{html.escape(sha)}" '
-              f'target="_blank" rel="noopener"><code>{html.escape(short_sha)}</code></a>'
-              f'（{html.escape(subject)} · 提交於 {commit_ts}）'
-          )
           idx_path = Path("dashboard/index.html")
           text = idx_path.read_text(encoding="utf-8")
           text = re.sub(
               r'<span id="deploy-stamp">.*?</span>',
-              lambda _: f'<span id="deploy-stamp">{stamp_html}</span>',
+              lambda _: f'<span id="deploy-stamp">{deploy_ts}</span>',
               text,
               flags=re.DOTALL,
           )

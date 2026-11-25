@@ -85,6 +85,7 @@ def test_reports_and_dashboard_rendering(tmp_path: Path) -> None:
     weekly_md = render_weekly_report(record=record, features=features, audit_summary=audit_sum)
     assert "五週期預測承諾表" in weekly_md
     assert "台股大盤多週期預測週報" in weekly_md
+    assert "系統版本與變更紀錄" in weekly_md
 
     monthly_md = render_monthly_audit_report(
         audit_month="2026-11",
@@ -105,6 +106,7 @@ def test_reports_and_dashboard_rendering(tmp_path: Path) -> None:
     assert "SHA-256 雜湊鏈驗證通過" in dash_html
     assert 'id="deploy-stamp"' in dash_html
     assert "預測資料鎖定：" in dash_html
+    assert "github.com" not in dash_html
     assert "charts/horizons_forecast.png?v=" in dash_html
     assert "<!DOCTYPE html>" in dash_html
 

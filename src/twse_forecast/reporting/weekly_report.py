@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from twse_forecast.config import HORIZONS
+from twse_forecast.config import HORIZONS, SYSTEM_CHANGELOG, SYSTEM_VERSION
 
 
 def render_weekly_report(
@@ -91,7 +91,9 @@ def render_weekly_report(
             f"- **PTT 股板心理學**：狂熱分數 `{sentiment.get('retail_euphoria_score')}` ｜ 反向訊號 `{sentiment.get('contrarian_signal')}`（爆文 `{sentiment.get('boom_posts')}` 篇）"
         )
 
-    if audit_summary and audit_summary.get("total_settled_horizons", 0) > 0:
+    has_perf_section = bool(audit_summary and audit_summary.get("total_settled_horizons", 0) > 0)
+    if has_perf_section:
+        assert audit_summary is not None
         sp = audit_summary.get("shadow_portfolio") or {}
         st = (sp.get("strategies") or {}).get("ai") or {}
         bh = (sp.get("strategies") or {}).get("buy_hold_0050") or {}
@@ -101,6 +103,16 @@ def render_weekly_report(
             f"- 已結算週期樣本數：`{audit_summary['total_settled_horizons']}`",
             f"- 模擬部位累積報酬：AI 動態策略 `{st.get('total_return_pct', 0.0):+.2f}%` vs. 買進持有 0050 `{bh.get('total_return_pct', 0.0):+.2f}%`",
         ])
+
+    changelog_num = "六" if has_perf_section else "五"
+    lines.extend([
+        "",
+        f"## {changelog_num}、系統版本與變更紀錄（目前版本：`{SYSTEM_VERSION}`）",
+        "| 日期 | 版本 | 變更內容 |",
+        "| :--- | :---: | :--- |",
+    ])
+    for chg_date, chg_ver, chg_desc in reversed(SYSTEM_CHANGELOG):
+        lines.append(f"| `{chg_date}` | `{chg_ver}` | {chg_desc} |")
 
     return "\n".join(lines) + "\n"
 

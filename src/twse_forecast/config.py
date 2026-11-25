@@ -20,6 +20,31 @@ MAX_AI_SCORE_DELTA = 25.0
 # 目標波動率（用於 Barroso & Santa-Clara 波動率管理部位控管）
 TARGET_ANNUAL_VOLATILITY = 0.18
 
+# 系統正式版本號與變更紀錄（將自動列印於每週預測週報）
+SYSTEM_VERSION = "v1.2.1"
+SYSTEM_CHANGELOG: tuple[tuple[str, str, str], ...] = (
+    (
+        "2026-11-24",
+        "v1.0.0",
+        "建立台股五大維度資料管線、第一層純量化基準與 SHA-256 不可竄改預測帳本（創世週次 2026-W48）。",
+    ),
+    (
+        "2026-11-25",
+        "v1.1.0",
+        "導入雲端自動化排程（Gemini 4 Neon 辯證引擎）、視覺化績效圖表、Google Drive 同步與公開網頁儀表板。",
+    ),
+    (
+        "2026-11-25",
+        "v1.2.0",
+        "新增閉環自我校準引擎（經驗波動率校準、動態 AI 授權韁繩與高信心誤判回饋）、Bayes-Stein 漂移收縮、條件波動率期限結構、期權 P/C Ratio 邊際變化與台股盤中殘缺日 K 防護。",
+    ),
+    (
+        "2026-11-25",
+        "v1.2.1",
+        "儀表板新增鎖定／重算／部署台灣時間戳記與圖表防快取機制，移除公開網頁程式碼連結，並於每週預測週報加入版本變更紀錄。",
+    ),
+)
+
 
 @dataclass(frozen=True, slots=True)
 class HorizonSpec:
